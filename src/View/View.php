@@ -42,10 +42,7 @@ class View
         } else {
 
             throw new Exception('view 파일이 존재하지 않습니다.');
-
         }
-
-        return $this;
     }
 
     public function bind(array $variables)
@@ -54,6 +51,4 @@ class View
 
         return $this;
     }
-
-    // TODO: 부모-자식뷰 꼭 구현하기.
 }

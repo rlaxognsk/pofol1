@@ -7,6 +7,6 @@ class MainController extends Controller
 {
     public function index(Request $req)
     {
-        return response()->view('test', ['hi' => 'Hello, World']);
+        return response()->view('child');
     }
 }

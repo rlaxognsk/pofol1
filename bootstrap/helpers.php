@@ -2,6 +2,7 @@
 
 use Pofol\Injector\Injector;
 use Pofol\Response\Response;
+use Pofol\View\ViewExtends;
 
 define('__PF_ROOT__', realpath(__DIR__ . '/..'));
 
@@ -72,5 +73,12 @@ if (!function_exists('view')) {
         $response = new Response();
 
         return $response->view($fileName, $variables);
+    }
+}
+
+if (!function_exists('__viewExtends')) {
+
+    function __viewExtends() {
+        return ViewExtends::instance();
     }
 }

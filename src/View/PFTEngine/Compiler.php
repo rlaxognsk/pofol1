@@ -20,6 +20,7 @@ class Compiler
         $this->compileFor();
         $this->compileForeach();
         $this->compileForelse();
+        $this->compileExtends();
 
         return $this->contents;
     }
@@ -137,5 +138,30 @@ class Compiler
         ];
 
         $this->contents = preg_replace($patterns, $replacements, $this->contents);
+    }
+
+    protected function compileExtends()
+    {
+        $patterns = [
+            '/@\s*section\s*\(\'(\w*)\'\)/',
+            '/@\s*endsection/',
+            '/@\s*yield\s*\(\'(\w*)\'\)/',
+        ];
+
+        $replacements = [
+            '<?php __viewExtends()->addSection(\'${1}\'); ?>',
+            '<?php __viewExtends()->endSection(); ?>',
+            '<?php __viewExtends()->yieldSection(\'${1}\'); ?>',
+        ];
+
+        $this->contents = preg_replace($patterns, $replacements, $this->contents);
+
+        $pattern = '/@\s*extends\s*\(\'(\w*)\'\)/';
+        $matches = [];
+
+        if (preg_match($pattern, $this->contents, $matches) === 1) {
+            $this->contents = preg_replace($pattern, '', $this->contents);
+            $this->contents .= PHP_EOL . "<?php __viewExtends()->extendParent('{$matches[1]}'); ?>";
+        }
     }
 }
