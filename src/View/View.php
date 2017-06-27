@@ -26,6 +26,12 @@ class View
 
         if (!empty($this->variables)) {
             foreach ($this->variables as $variable => $value) {
+                // child 컨텍스트의 $file변수가 parent 컨텍스트의 $file변수로 덮어 씌어진다.
+                // 따라서 현재 컨텍스트에 존재하는 변수는 그냥 pass시킨다.
+                if (isset($$variable)) {
+                    continue;
+                }
+
                 $$variable = $value;
             }
         }

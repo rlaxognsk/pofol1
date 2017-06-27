@@ -52,4 +52,3 @@ class ViewExtends
         View::get($fileName)->bind($variables)->view();
     }
 }
-// TODO: ViewExtend 변수 binding 구현하기.

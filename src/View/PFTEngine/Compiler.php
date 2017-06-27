@@ -161,7 +161,7 @@ class Compiler
 
         if (preg_match($pattern, $this->contents, $matches) === 1) {
             $this->contents = preg_replace($pattern, '', $this->contents);
-            $this->contents .= PHP_EOL . "<?php __viewExtends()->extendParent('{$matches[1]}'); ?>";
+            $this->contents .= PHP_EOL . "<?php __viewExtends()->extendParent('{$matches[1]}', get_defined_vars()); ?>";
         }
     }
 }

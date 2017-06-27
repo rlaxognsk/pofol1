@@ -17,5 +17,6 @@
 <footer>
     @yield('footer')
 </footer>
+<h1>변수 a의 값은 {{ $a }}</h1>
 </body>
 </html>
