@@ -18,10 +18,8 @@ class ViewExtends
     {
         if (self::$singleton === null) {
             self::$singleton = new ViewExtends;
-            return self::$singleton;
-        } else {
-            return self::$singleton;
         }
+        return self::$singleton;
     }
 
     public function addSection($sectionName)

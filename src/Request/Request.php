@@ -1,6 +1,8 @@
 <?php
 namespace Pofol\Request;
 
+use Pofol\Support\Str;
+
 class Request
 {
     protected $url;
@@ -10,20 +12,6 @@ class Request
     {
         $this->url = $_SERVER['REQUEST_URI'];
         $this->urlPattern = explode('/', $this->url());
-    }
-
-    protected function qualifyUrl($url = null)
-    {
-        if ($url === null) {
-            $url = $this->url;
-        }
-
-        $url = preg_replace('/\?.*/', '', $url);
-
-        if ($url[strlen($url) - 1] !== '/') {
-            $url .= '/';
-        }
-        return $url;
     }
 
     public function query($key = null, $value = null)
@@ -59,7 +47,7 @@ class Request
 
     public function url()
     {
-        return $this->qualifyUrl();
+        return Str::qualifyUrl($this->url);
     }
 
     public function fullUrl()

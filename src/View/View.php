@@ -9,7 +9,7 @@ class View
     protected $fileName;
     protected $variables = [];
 
-    public function __construct($fileName)
+    private function __construct($fileName)
     {
         $this->fileName = $fileName;
     }

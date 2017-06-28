@@ -48,7 +48,7 @@ $kernel->app();
 ## PofolService
 `PofolService`클래스는 프레임워크 라이프 사이클에서 핵심 로직을 담당하는 요소들이 구현해야 할 인터페이스이다.
 
-`Kernel`클래스는 내부 메서드로 해당 요소의 boot() 메서드를 실행시키기 때문이다.
+`Kernel`클래스는 내부 메서드로 해당 요소의 `boot()` 메서드를 실행시키기 때문이다.
 
 ```php
 protected function bootRouter()
@@ -82,6 +82,8 @@ protected function bootController(Route $route)
 ## Session
 `Session`클래스는 `$_SESSION`을 객체 인터페이스로 사용할 수 있게 도와준다. 아직 구현하지 않았다.
 
+## Support
+`Support` 디렉터리에는 헬퍼클래스들이 정의되어 있다. 현재는 문자열 관련 헬퍼메서드들을 담은 헬퍼클래스인 `Str` 만이 존재한다.
 ## View
 `View`클래스는 라라벨의 `Blade`템플릿과 비슷하게 뷰를 템플릿으로 구현할 수 있게 컴파일러 엔진을 구현하고 이를 이용해서 웹문서를 만들어주는 클래스다.
 

@@ -2,6 +2,7 @@
 namespace Pofol\Router;
 
 use Closure;
+use Pofol\Support\Str;
 
 class RouteRegistrar
 {
@@ -86,17 +87,7 @@ class RouteRegistrar
 
         }
 
-        if ($url[0] !== '/') {
-
-            $url = '/' . $url;
-
-        }
-
-        if ($url[strlen($url) - 1] !== '/') {
-
-            $url .= '/';
-
-        }
+        $url = Str::qualifyUrl($url);
 
         $url = preg_replace('/\/{2,}/', '/', $url);
 

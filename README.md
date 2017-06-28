@@ -22,14 +22,14 @@
 * [PSR-1](http://www.php-fig.org/psr/psr-1/), [PSR-2](http://www.php-fig.org/psr/psr-2/), [PSR-4](http://www.php-fig.org/psr/psr-4/)를 준수하고자 노력하였음.
 
 ## 프로젝트 구조
-* app - 컨트롤러, 미들웨어 커스텀 폴더
+* app - 모델, 컨트롤러, 미들웨어 등 비즈니스 로직을 담은 객체 폴더
     * Controller
     * Middleware
 * bootstrap - 오토로드, 헬퍼함수 등
 * config - 프레임워크 전반적인 설정들(DB 정보 등)
 * public - 웹 루트 폴더
 * route - 라우팅
-* src - 프레임워크에서 사용되는 클래스들
+* [src](https://github.com/rlaxognsk/pofol1/tree/master/src) - 프레임워크에서 사용되는 클래스들
     * Controller
     * DB
     * Injector - 의존성 주입 도구
