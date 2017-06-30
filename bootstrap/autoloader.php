@@ -1,6 +1,6 @@
 <?php
 
-function autoload($className) {
+function __pfAutoload($className) {
     $location = explode('\\', $className);
 
     switch ($location[0]) {
@@ -22,4 +22,4 @@ function autoload($className) {
     require $path;
 }
 
-spl_autoload_register('autoload');
+spl_autoload_register('__pfAutoload');
