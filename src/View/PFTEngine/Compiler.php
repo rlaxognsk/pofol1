@@ -21,6 +21,7 @@ class Compiler
         $this->compileForeach();
         $this->compileForelse();
         $this->compileExtends();
+        $this->compileImport();
 
         return $this->contents;
     }
@@ -161,7 +162,16 @@ class Compiler
 
         if (preg_match($pattern, $this->contents, $matches) === 1) {
             $this->contents = preg_replace($pattern, '', $this->contents);
-            $this->contents .= PHP_EOL . "<?php __viewExtends()->extendParent('{$matches[1]}', get_defined_vars()); ?>";
+            $this->contents .= PHP_EOL . "<?php __viewExtends()->import('{$matches[1]}', get_defined_vars()); ?>";
         }
+    }
+
+    protected function compileImport()
+    {
+        $pattern = '/@\s*import\s*\(\'(\w*)\'\)/';
+
+        $replacement = '<?php __viewExtends()->import(\'${1}\', get_defined_vars()); ?>';
+
+        $this->contents = preg_replace($pattern, $replacement, $this->contents);
     }
 }

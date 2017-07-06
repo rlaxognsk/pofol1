@@ -45,7 +45,7 @@ class ViewExtends
         }
     }
 
-    public function extendParent($fileName, array $variables = [])
+    public function import($fileName, array $variables = [])
     {
         View::get($fileName)->bind($variables)->view();
     }
