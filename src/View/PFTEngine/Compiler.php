@@ -23,7 +23,7 @@ class Compiler
         $this->compileExtends();
         $this->compileImport();
 
-        return $this->contents;
+        return trim($this->contents);
     }
 
     protected function setFileContents()
