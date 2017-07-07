@@ -9,6 +9,7 @@ use Pofol\Response\NoResponseException;
 use Pofol\Response\Response;
 use Pofol\Router\Route;
 use Pofol\Router\Router;
+use Pofol\Session\Session;
 
 class Kernel
 {
@@ -22,6 +23,7 @@ class Kernel
     public function app()
     {
         ob_start();
+        $this->bootSession();
 
         $route = $this->bootRouter();
         $response = $this->bootMiddleware();
@@ -41,6 +43,12 @@ class Kernel
         $response->send();
 
         ob_flush();
+    }
+
+    protected function bootSession()
+    {
+        $session = new Session();
+        $session->boot();
     }
 
     protected function bootRouter()
