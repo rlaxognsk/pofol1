@@ -14,7 +14,7 @@ class DB
         //
     }
 
-    public static function init()
+    protected static function init()
     {
         $db = config('db');
 
@@ -45,6 +45,34 @@ class DB
 
     public static function select($query, $params = [])
     {
+        $stmt = self::execute($query, $params);
+
+        return $stmt->fetchAll(PDO::FETCH_OBJ);
+    }
+
+    public static function insert($query, $params = [])
+    {
+        $stmt = self::execute($query, $params);
+
+        return $stmt->rowCount();
+    }
+
+    public static function delete($query, $params = [])
+    {
+        $stmt = self::execute($query, $params);
+
+        return $stmt->rowCount();
+    }
+
+    public static function update($query, $params = [])
+    {
+        $stmt = self::execute($query, $params);
+
+        return $stmt->rowCount();
+    }
+
+    protected static function execute($query, $params)
+    {
         $stmt = self::query($query, $params);
 
         if (!$stmt->execute()) {
@@ -53,7 +81,7 @@ class DB
             throw new Exception("쿼리 실행 실패. {$message[2]}");
         }
 
-        return $stmt->fetchObject();
+        return $stmt;
     }
 
     protected static function query($query, $params)
@@ -64,7 +92,6 @@ class DB
 
         $stmt = self::$pdo->prepare($query);
 
-        var_dump($params);
         foreach ($params as $key => $value) {
             if (is_string($key)) {
                 $stmt->bindValue($key, self::revealedType($value));

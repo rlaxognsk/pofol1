@@ -13,14 +13,18 @@ class QueryBuilder
     const STMT_UPDATE = 3;
     const OPER_AND = 10;
     const OPER_OR = 11;
+    const UPDATE_INC = 20;
+    const UPDATE_DEC = 21;
 
     protected $pdo;
     protected $statement;
     protected $table;
     protected $columns = [];
+    protected $clauses = [];
     protected $conditions = [];
     protected $whereQueue = [];
     protected $values = [];
+    protected $rawValues = [];
     protected $boundValues = [];
 
     public function __construct(PDO $pdo, $table)
@@ -42,6 +46,80 @@ class QueryBuilder
         }
 
         $this->columns = $columns;
+
+        return $this;
+    }
+
+    public function addSelect(...$columns)
+    {
+        if (!isset($this->statement) || $this->statement !== self::STMT_SELECT) {
+            throw new Exception("SELECT statement를 호출한 뒤에 사용해야 합니다.");
+        }
+
+        foreach ($columns as $column) {
+            $this->columns[] = $column;
+        }
+
+        return $this;
+    }
+
+    public function distinct()
+    {
+        $this->clauses['distinct'] = true;
+
+        return $this;
+    }
+
+    public function join()
+    {
+        
+    }
+
+    public function asc(...$columns)
+    {
+        $this->orderBy($columns);
+
+        $this->clauses['orderBy'][] = 'ASC';
+
+        return $this;
+    }
+
+    public function desc(...$columns)
+    {
+        $this->orderBy($columns);
+
+        $this->clauses['orderBy'][] = 'DESC';
+
+        return $this;
+    }
+
+    protected function orderBy(array $columns)
+    {
+        if (isset($this->clauses['orderBy'])) {
+            throw new Exception("이미 ASC, DESC가 선언되었습니다.");
+        } elseif (count($columns) === 0) {
+            throw new Exception("정렬 기준 column이 입력되어야 합니다.");
+        }
+
+        foreach ($columns as $value) {
+            $this->clauses['orderBy'][] = $this->wrapGrave($value);
+        }
+    }
+
+    public function limit($value)
+    {
+        $this->clauses['limit'] = (int)$value;
+
+        return $this;
+    }
+
+    public function offset($value)
+    {
+        if (!isset($this->clauses['limit'])) {
+            throw new Exception("limit을 먼저 호출해주세요.");
+        }
+
+        $this->clauses['offset'] = (int)$value;
 
         return $this;
     }
@@ -70,7 +148,9 @@ class QueryBuilder
             }
         }
 
-        $this->execute();
+        $stmt = $this->execute();
+
+        return $stmt->rowCount();
     }
 
     public function where(...$conditions)
@@ -99,6 +179,7 @@ class QueryBuilder
 
         $stmt = $this->execute();
 
+        return $stmt->rowCount();
     }
 
     public function update(array $data)
@@ -119,6 +200,58 @@ class QueryBuilder
         $this->boundValues = array_merge($temp, $this->boundValues);
 
         $stmt = $this->execute();
+
+        return $stmt->rowCount();
+    }
+
+    public function increment($column, ...$data)
+    {
+        return $this->updateVariation(self::UPDATE_INC, $column, $data);
+    }
+
+    public function decrement($column, ...$data)
+    {
+        return $this->updateVariation(self::UPDATE_DEC, $column, $data);
+    }
+
+    protected function updateVariation($type, $column, $data)
+    {
+        $variation = 1;
+
+        $column = $this->wrapGrave($column);
+
+        if (isset($data[0])) {
+            if (is_numeric($data[0])) {
+                $variation = $data[0];
+            } elseif (is_array($data[0])) {
+                $data = $data[0];
+            } else {
+                throw new Exception("decrement 사용 방식이 잘못되었습니다.");
+            }
+        }
+
+        if (isset($data[1]) && is_array($data[1])) {
+            $data = $data[1];
+        }
+
+        switch ($type) {
+            case self::UPDATE_INC:
+                $this->rawValues[] = "$column = $column + $variation";
+                break;
+
+            case self::UPDATE_DEC:
+                $this->rawValues[] = "$column = $column - $variation";
+                break;
+
+            default:
+                throw new Exception("타입이 정해지지 않았습니다.");
+        }
+
+        if (empty($data)) {
+            $data = [];
+        }
+
+        return $this->update($data);
     }
 
     protected function handlingWhere($conditions)
@@ -166,12 +299,13 @@ class QueryBuilder
         $length = count($condition);
 
         if ($length === 2) {
+            $condition[0] = $this->wrapGrave($condition[0]);
             $this->boundValues[] = $condition[1];
-            $condition = ["`{$condition[0]}`", '=', '?'];
+            $condition = [$condition[0], '=', '?'];
             return $condition;
         } elseif ($length === 3) {
             $this->boundValues[] = $condition[2];
-            $condition[0] = "`{$condition[0]}`";
+            $condition[0] = $this->wrapGrave($condition[0]);
             $condition[2] = '?';
             return $condition;
         } else {
@@ -188,9 +322,9 @@ class QueryBuilder
     {
         $stmt = $this->execute();
 
-        $tableName = Str::toCamel($this->table);
-        $filePath = __PF_ROOT__ . '\\' . 'app\\' . $tableName . '.php';
-        $className = 'App\\' . $tableName;
+        $modelName = Str::toCamel($this->table);
+        $filePath = __PF_ROOT__ . '\\' . 'app\\' . $modelName . '.php';
+        $className = 'App\\' . $modelName;
 
         if (file_exists($filePath)) {
             return $stmt->fetchAll(PDO::FETCH_CLASS, $className);
@@ -208,7 +342,6 @@ class QueryBuilder
         $query = $this->buildQuery();
 
         var_dump($query);
-        var_dump($this->boundValues);
 
         $stmt = $this->pdo->prepare($query);
 
@@ -232,6 +365,7 @@ class QueryBuilder
                 $this->buildSelect($query);
                 $this->buildFrom($query);
                 $this->buildWhereIfExist($query);
+                $this->buildClauses($query);
                 break;
 
             case self::STMT_INSERT:
@@ -258,9 +392,11 @@ class QueryBuilder
 
     protected function buildSelect(&$query)
     {
-        $query[] = 'SELECT';
+        $query[] = !empty($this->clauses['distinct']) ? 'SELECT DISTINCT' : 'SELECT';
 
-        $this->wrapGraves($this->columns);
+        if ($this->columns[0] !== '*') {
+            $this->wrapGraves($this->columns);
+        }
 
         $query[] = join(', ', $this->columns);
     }
@@ -295,6 +431,27 @@ class QueryBuilder
         $query[] = 'WHERE ' . join(' ', $where);
     }
 
+    protected function buildClauses(&$query)
+    {
+        if (isset($this->clauses['orderBy'])) {
+            $order = array_pop($this->clauses['orderBy']);
+
+            $query[] = 'ORDER BY';
+            $query[] = join(', ', $this->clauses['orderBy']);
+            $query[] = $order;
+        }
+
+        if (isset($this->clauses['limit'])) {
+            $query[] = 'LIMIT';
+            $query[] = $this->clauses['limit'];
+        }
+
+        if (isset($this->clauses['offset'])) {
+            $query[] = 'OFFSET';
+            $query[] = $this->clauses['offset'];
+        }
+    }
+
     protected function buildInsert(&$query)
     {
         $query[] = "INSERT INTO `{$this->table}`";
@@ -315,9 +472,8 @@ class QueryBuilder
 
         $this->wrapGraves($this->values);
 
-        $query[] = join(', ', $this->values);
+        $query[] = join(', ', array_merge($this->values, $this->rawValues));
     }
-
 
     protected function buildValues(&$query)
     {
@@ -347,8 +503,44 @@ class QueryBuilder
     protected function wrapGraves(array &$values)
     {
         array_walk($values, function (&$item) {
-            $item = "`$item`";
+            $item = $this->wrapGrave($item);
         });
+    }
+
+    protected function wrapGrave($item)
+    {
+        $matches = [];
+        $itemArr = null;
+        $newItem = [];
+
+        if (strpos($item, '\`') !== false) {
+            $item = str_replace('\`', '', $item);
+        }
+
+        if (preg_match('/(\s[Aa][Ss]\s)/', $item, $matches)) {
+            $itemArr = explode($matches[1], $item);
+        } else {
+            $itemArr = [$item];
+        }
+
+        foreach($itemArr as $value) {
+            if (strpos($value, '.')) {
+                $value = explode('.', $value);
+                $value[0] = "`{$value[0]}`";
+                $value[1] = $value[1] === '*' ? $value[1] : "`{$value[1]}`";
+                $newItem[] = join('.', $value);
+            } else {
+                $newItem[] = "`$value`";
+            }
+        }
+
+        if (count($newItem) === 2) {
+            $newItem = join(' AS ', $newItem);
+        } else {
+            $newItem = $newItem[0];
+        }
+
+        return $newItem;
     }
 
     protected function revealedType($value)
