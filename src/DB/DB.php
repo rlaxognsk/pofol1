@@ -94,9 +94,9 @@ class DB
 
         foreach ($params as $key => $value) {
             if (is_string($key)) {
-                $stmt->bindValue($key, self::revealedType($value));
+                $stmt->bindValue($key, $value, self::revealedType($value));
             } else {
-                $stmt->bindValue(($key + 1), self::revealedType($value));
+                $stmt->bindValue(($key + 1), $value, self::revealedType($value));
             }
         }
 
