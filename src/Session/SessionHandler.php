@@ -59,12 +59,12 @@ class SessionHandler implements SessionHandlerInterface
 
     public function close()
     {
-        // 세션이 끝날 때 수행할 작업
+        // TODO: Implement close() method.
     }
 
     public function destroy($session_id)
     {
-        $filepath ="{$this->path}\\$session_id";
+        $filepath = "{$this->path}\\$session_id";
 
         if (file_exists($filepath)) {
             unlink($filepath);
@@ -73,7 +73,6 @@ class SessionHandler implements SessionHandlerInterface
 
     public function gc($maxlifetime)
     {
-        // Garbage Collection에 의해 실행될 때
-        // $maxlifetime의 단위는 s
+        // TODO: Implement gc() method.
     }
 }

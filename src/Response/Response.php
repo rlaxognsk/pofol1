@@ -41,8 +41,10 @@ class Response
 
     public function send()
     {
-        if (!$this->isReady) {
-            throw new NoResponseException("응답 요소가 존재하지 않습니다.");
+        if (!$this->isRedirect) {
+            if (!$this->isReady) {
+                throw new NoResponseException("응답 요소가 존재하지 않습니다.");
+            }
         }
 
         $this->setStatusCode();
@@ -63,6 +65,8 @@ class Response
     {
         header("Location: $location");
         $this->isRedirect = true;
+
+        return $this;
     }
 
     public function isRedirect()
@@ -107,6 +111,16 @@ class Response
         }
 
         header('Content-Type: application/json');
+
+        $this->isReady = true;
+        return $this;
+    }
+
+    public function str()
+    {
+        if ($this->isReady) {
+            throw new Exception("이미 응답요소가 준비되어 있습니다.");
+        }
 
         $this->isReady = true;
         return $this;

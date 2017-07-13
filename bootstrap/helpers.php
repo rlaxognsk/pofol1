@@ -63,7 +63,7 @@ if (!function_exists('redirect')) {
 
     function redirect($location) {
         $response = new Response();
-        $response->redirect($location);
+        $response->redirect($location)->send();
     }
 }
 
@@ -95,5 +95,12 @@ if (!function_exists('randString')) {
         }
 
         return $string;
+    }
+}
+
+if (!function_exists('csrf_token')) {
+
+    function csrf_token() {
+        return '<input type="hidden" name="_token" value="' . $_SESSION['_token'] . '"/>';
     }
 }

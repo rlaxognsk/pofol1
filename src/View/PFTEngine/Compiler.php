@@ -53,7 +53,7 @@ class Compiler
     protected function compileEscapeExpression()
     {
         $patterns = [
-            '/\{\!(.*)\!\}/',
+            '/\{\!\!(.*)\!\!\}/',
         ];
 
         $replacements = [

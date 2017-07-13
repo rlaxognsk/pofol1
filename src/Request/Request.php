@@ -51,4 +51,13 @@ class Request
     {
         return $this->urlPattern;
     }
+
+    public function token()
+    {
+        if (isset($_POST['_token'])) {
+            return $_POST['_token'];
+        }
+
+        return null;
+    }
 }

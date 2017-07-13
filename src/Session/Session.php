@@ -1,15 +1,14 @@
 <?php
 namespace Pofol\Session;
 
-use Pofol\PofolService\PofolService;
-
-class Session implements PofolService
+class Session
 {
-    public function boot()
+    public function get($key = null, $value = null)
     {
-        $configPath = __PF_ROOT__ . '\\' . config('session.PATH');
-        session_write_close();
-        session_set_save_handler(new SessionHandler($configPath));
-        session_start();
+        if (isset($_SESSION[$key])) {
+            return $_SESSION[$key];
+        }
+
+        return $value;
     }
 }
