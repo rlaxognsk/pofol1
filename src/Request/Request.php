@@ -14,30 +14,22 @@ class Request
         $this->urlPattern = explode('/', $this->url());
     }
 
-    public function query($key = null, $value = null)
+    public function query($key, $value = null)
     {
-        if ($key !== null) {
+        if (isset($_GET[$key])) {
             return $_GET[$key];
         }
 
-        if (empty($_GET[$key])) {
-            return $value;
-        }
-
-        return $_GET;
+        return $value;
     }
 
     public function input($key = null, $value = null)
     {
-        if ($key !== null) {
+        if (isset($_POST[$key])) {
             return $_POST[$key];
         }
 
-        if (empty($_POST[$key])) {
-            return $value;
-        }
-
-        return $_POST;
+        return $value;
     }
 
     public function method()
