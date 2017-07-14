@@ -9,7 +9,7 @@ use Pofol\Response\NoResponseException;
 use Pofol\Response\Response;
 use Pofol\Router\Route;
 use Pofol\Router\Router;
-use Pofol\Session\Session;
+use Pofol\Session\SessionService;
 
 class Kernel
 {
@@ -47,7 +47,7 @@ class Kernel
 
     protected function bootSession()
     {
-        $session = new Session();
+        $session = new SessionService();
         $session->boot();
     }
 
@@ -90,7 +90,9 @@ class Kernel
 
             echo $response;
 
-            return new Response;
+            $response = new Response();
+            $response->str();
+            return $response;
 
         } else {
 
