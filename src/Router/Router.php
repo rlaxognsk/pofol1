@@ -48,6 +48,9 @@ class Router implements PofolService
         $namespace = __DIR__ . '/../../route';
         $routeList = config('route');
 
+        // 기본 Route List
+        require 'default.php';
+
         for ($i = 0, $len = count($routeList); $i < $len; $i++) {
 
             require $namespace . '/' . $routeList[$i] . '.php';

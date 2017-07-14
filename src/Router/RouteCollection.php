@@ -27,7 +27,7 @@ class RouteCollection
                 continue;
             }
 
-            if ($params = $this->checkURL($route)) {
+            if ($params = $this->checkUrl($route)) {
                 if (is_array($params)) {
                     $route->setParams($params);
                 }
@@ -46,7 +46,7 @@ class RouteCollection
         return false;
     }
 
-    protected function checkURL(Route $route)
+    protected function checkUrl(Route $route)
     {
         if ($route->getUrl() === $this->request->url()) {
             return true;
