@@ -1,7 +1,6 @@
 <?php
 namespace Pofol\DB;
 
-use Exception;
 use PDO;
 use Pofol\Support\Str;
 
@@ -16,6 +15,8 @@ class QueryBuilder
     const UPDATE_INC = 20;
     const UPDATE_DEC = 21;
 
+    protected static $specialCharacters = ['>', '<', '=', '<>', '!=', '*'];
+
     protected $pdo;
     protected $statement;
     protected $table;
@@ -26,6 +27,7 @@ class QueryBuilder
     protected $values = [];
     protected $rawValues = [];
     protected $boundValues = [];
+    protected $inItems = [];
 
     public function __construct(PDO $pdo, $table)
     {
@@ -36,7 +38,7 @@ class QueryBuilder
     public function select(...$columns)
     {
         if (isset($this->statement)) {
-            throw new Exception("이미 statement가 선언되었습니다.");
+            throw new QueryException("이미 statement가 선언되었습니다.");
         }
 
         $this->statement = self::STMT_SELECT;
@@ -53,7 +55,7 @@ class QueryBuilder
     public function addSelect(...$columns)
     {
         if (!isset($this->statement) || $this->statement !== self::STMT_SELECT) {
-            throw new Exception("SELECT statement를 호출한 뒤에 사용해야 합니다.");
+            throw new QueryException("SELECT statement를 호출한 뒤에 사용해야 합니다.");
         }
 
         foreach ($columns as $column) {
@@ -70,9 +72,26 @@ class QueryBuilder
         return $this;
     }
 
-    public function join()
+    public function join(...$args)
     {
-        
+        if (count($args) !== 4) {
+            throw new QueryException("join 매개변수를 확인하세요.");
+        }
+
+        $this->clauses['innerJoin'][] = $args;
+
+        return $this;
+    }
+
+    public function leftJoin(...$args)
+    {
+        if (count($args) !== 4) {
+            throw new QueryException("leftJoin 매개변수를 확인하세요.");
+        }
+
+        $this->clauses['leftJoin'][] = $args;
+
+        return $this;
     }
 
     public function asc(...$columns)
@@ -96,9 +115,9 @@ class QueryBuilder
     protected function orderBy(array $columns)
     {
         if (isset($this->clauses['orderBy'])) {
-            throw new Exception("이미 ASC, DESC가 선언되었습니다.");
+            throw new QueryException("이미 ASC, DESC가 선언되었습니다.");
         } elseif (count($columns) === 0) {
-            throw new Exception("정렬 기준 column이 입력되어야 합니다.");
+            throw new QueryException("정렬 기준 column이 입력되어야 합니다.");
         }
 
         foreach ($columns as $value) {
@@ -116,7 +135,7 @@ class QueryBuilder
     public function offset($value)
     {
         if (!isset($this->clauses['limit'])) {
-            throw new Exception("limit을 먼저 호출해주세요.");
+            throw new QueryException("limit을 먼저 호출해주세요.");
         }
 
         $this->clauses['offset'] = (int)$value;
@@ -127,7 +146,7 @@ class QueryBuilder
     public function insert(array $data)
     {
         if (isset($this->statement)) {
-            throw new Exception("이미 statement가 선언되었습니다.");
+            throw new QueryException("이미 statement가 선언되었습니다.");
         }
 
         $this->statement = self::STMT_INSERT;
@@ -169,10 +188,27 @@ class QueryBuilder
         return $this;
     }
 
+    public function whereIn($column, ...$values)
+    {
+        if (is_array($values[0])) {
+            $values = $values[0];
+        }
+
+        if (count($values) === 0) {
+            throw new QueryException("column을 입력하셔야 합니다.");
+        }
+
+        foreach ($values as $value) {
+            $this->inItems[$column][] = $value;
+        }
+
+        return $this;
+    }
+
     public function delete()
     {
         if (isset($this->statement)) {
-            throw new Exception("이미 statement가 선언되었습니다.");
+            throw new QueryException("이미 statement가 선언되었습니다.");
         }
 
         $this->statement = self::STMT_DELETE;
@@ -185,7 +221,7 @@ class QueryBuilder
     public function update(array $data)
     {
         if (isset($this->statement)) {
-            throw new Exception("이미 statement가 선언되었습니다.");
+            throw new QueryException("이미 statement가 선언되었습니다.");
         }
 
         $this->statement = self::STMT_UPDATE;
@@ -193,7 +229,7 @@ class QueryBuilder
         $temp = [];
 
         foreach ($data as $key => $value) {
-            $this->values[] = "$key = ?";
+            $this->values[] = "`$key` = ?";
             $temp[] = $value;
         }
 
@@ -226,7 +262,7 @@ class QueryBuilder
             } elseif (is_array($data[0])) {
                 $data = $data[0];
             } else {
-                throw new Exception("decrement 사용 방식이 잘못되었습니다.");
+                throw new QueryException("decrement 사용 방식이 잘못되었습니다.");
             }
         }
 
@@ -244,7 +280,7 @@ class QueryBuilder
                 break;
 
             default:
-                throw new Exception("타입이 정해지지 않았습니다.");
+                throw new QueryException("타입이 정해지지 않았습니다.");
         }
 
         if (empty($data)) {
@@ -267,7 +303,7 @@ class QueryBuilder
 
         foreach ($conditions as $condition) {
             if (!is_array($condition)) {
-                throw new Exception("where 형식이 잘못되었습니다.");
+                throw new QueryException("where 형식이 잘못되었습니다.");
             }
 
             $groupConditions[] = join(' ', $this->qualifyCondition($condition));
@@ -309,13 +345,24 @@ class QueryBuilder
             $condition[2] = '?';
             return $condition;
         } else {
-            throw new Exception("where 형식이 잘못되었습니다.");
+            throw new QueryException("where 형식이 잘못되었습니다.");
         }
     }
 
     public function first()
     {
-        //
+        $stmt = $this->execute();
+
+        $modelName = Str::toCamel($this->table);
+        $modelName = substr($modelName, 0, -1);
+        $filePath = __PF_ROOT__ . '\\' . 'app\\' . $modelName . '.php';
+        $className = 'App\\' . $modelName;
+
+        if (file_exists($filePath)) {
+            return $stmt->fetchObject($className, [[], true]);
+        }
+
+        return $stmt->fetchObject();
     }
 
     public function get()
@@ -327,16 +374,21 @@ class QueryBuilder
         $className = 'App\\' . $modelName;
 
         if (file_exists($filePath)) {
-            return $stmt->fetchAll(PDO::FETCH_CLASS, $className);
+            return $stmt->fetchAll(PDO::FETCH_CLASS, $className, [[], true]);
         }
 
         return $stmt->fetchAll(PDO::FETCH_OBJ);
     }
 
+    protected function prepareModelObject()
+    {
+        // TODO: 이거 필요한 메서드인가?
+    }
+
     protected function execute()
     {
         if (!isset($this->statement)) {
-            throw new Exception("쿼리 statement가 선언되지 않았습니다.");
+            throw new QueryException("쿼리 statement가 선언되지 않았습니다.");
         }
 
         $query = $this->buildQuery();
@@ -345,10 +397,20 @@ class QueryBuilder
 
         $stmt = $this->pdo->prepare($query);
 
-        for ($i = 0, $len = count($this->boundValues); $i < $len; $i++) {
-            $value = $this->boundValues[$i];
+        if (!empty($this->boundValues)) {
+            for ($i = 0, $len = count($this->boundValues); $i < $len; $i++) {
+                $value = $this->boundValues[$i];
 
-            $stmt->bindValue($i + 1, $value, $this->revealedType($value));
+                $stmt->bindValue($i + 1, $value, $this->revealedType($value));
+            }
+        } elseif (!empty($this->inItems)) {
+            foreach ($this->inItems as $key => $values) {
+                for ($i = 0, $len = count($values); $i < $len; $i++) {
+                    $value = $values[$i];
+
+                    $stmt->bindValue($i + 1, $value, $this->revealedType($value));
+                }
+            }
         }
 
         $stmt->execute();
@@ -365,6 +427,7 @@ class QueryBuilder
                 $this->buildSelect($query);
                 $this->buildFrom($query);
                 $this->buildWhereIfExist($query);
+                $this->buildWhereInIfExist($query);
                 $this->buildClauses($query);
                 break;
 
@@ -376,15 +439,17 @@ class QueryBuilder
             case self::STMT_DELETE:
                 $this->buildDelete($query);
                 $this->buildWhereIfExist($query);
+                $this->buildWhereInIfExist($query);
                 break;
 
             case self::STMT_UPDATE:
                 $this->buildUpdate($query);
                 $this->buildWhereIfExist($query);
+                $this->buildWhereInIfExist($query);
                 break;
 
             default:
-                throw new Exception("쿼리 statement가 선언되지 않았습니다.");
+                throw new QueryException("쿼리 statement가 선언되지 않았습니다.");
         }
 
         return join(' ', $query);
@@ -411,6 +476,11 @@ class QueryBuilder
         if (empty($this->conditions)) {
             return;
         }
+
+        if (!empty($this->inItems)) {
+            throw new QueryException("where, orWhere은 whereIn과 같이 사용할 수 없습니다.");
+        }
+
         // stack을 뒤집어서 queue로 사용한다.
         if (count($this->whereQueue) > 1) {
             $this->whereQueue = array_reverse($this->whereQueue);
@@ -431,8 +501,50 @@ class QueryBuilder
         $query[] = 'WHERE ' . join(' ', $where);
     }
 
+    protected function buildWhereInIfExist(&$query)
+    {
+        if (empty($this->inItems)) {
+            return;
+        }
+
+        if (!empty($this->conditions)) {
+            throw new QueryException("whereIn은 where, orWhere과 같이 사용할 수 없습니다.");
+        }
+
+        $query[] = 'WHERE';
+
+        foreach ($this->inItems as $key => $values) {
+            $query[] = $this->wrapGrave($key);
+            $query[] = 'IN';
+
+            $query[] = '(' . join(', ', array_fill(0, count($values), '?')) . ')';
+        }
+    }
+
     protected function buildClauses(&$query)
     {
+        if (isset($this->clauses['innerJoin'])) {
+            foreach ($this->clauses['innerJoin'] as $value) {
+                $this->wrapGraves($value);
+
+                $query[] = 'INNER JOIN';
+                $query[] = $value[0];
+                $query[] = 'ON';
+                $query[] = "{$value[1]} {$value[2]} {$value[3]}";
+            }
+        }
+
+        if (isset($this->clauses['leftJoin'])) {
+            foreach ($this->clauses['leftJoin'] as $value) {
+                $this->wrapGraves($value);
+
+                $query[] = 'LEFT JOIN';
+                $query[] = $value[0];
+                $query[] = 'ON';
+                $query[] = "{$value[1]} {$value[2]} {$value[3]}";
+            }
+        }
+
         if (isset($this->clauses['orderBy'])) {
             $order = array_pop($this->clauses['orderBy']);
 
@@ -469,8 +581,6 @@ class QueryBuilder
     protected function buildUpdate(&$query)
     {
         $query[] = "UPDATE `{$this->table}` SET";
-
-        $this->wrapGraves($this->values);
 
         $query[] = join(', ', array_merge($this->values, $this->rawValues));
     }
@@ -527,10 +637,10 @@ class QueryBuilder
             if (strpos($value, '.')) {
                 $value = explode('.', $value);
                 $value[0] = "`{$value[0]}`";
-                $value[1] = $value[1] === '*' ? $value[1] : "`{$value[1]}`";
+                $value[1] = $value[1] === '*' ? '*' : "`{$value[1]}`";
                 $newItem[] = join('.', $value);
             } else {
-                $newItem[] = "`$value`";
+                $newItem[] = in_array($value, self::$specialCharacters) ? $value : "`$value`";
             }
         }
 
