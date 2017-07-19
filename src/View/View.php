@@ -45,8 +45,11 @@ class View
 
             require $file . '.php';
 
-        } else {
+        } elseif (file_exists($file . '.html')) {
 
+            require $file . '.html';
+
+        } else {
             throw new Exception('view 파일이 존재하지 않습니다.');
         }
     }
